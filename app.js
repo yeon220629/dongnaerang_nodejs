@@ -7,7 +7,7 @@ app.get('/', function (req, res) {
     res.send('Hello World !!')
 })
 
-// 알람 보낼 데이터 가져오기
+// 알람 보낼 데이터 가져오기 바람
 app.get('/getData', fmcMessage.getData);
 // 알람 보내기
 // app.get('/pushAlram', fmcMessage.pushAlarm);
