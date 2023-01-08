@@ -1,6 +1,6 @@
 const express = require('express')
 const app = express()
-const fmcMessage = require('../nodejscra/firebaseFcm/sendMessage');
+const fmcMessage = require('../dongnaerang_nodejs/firebaseFcm/sendMessage');
 
 app.get('/', function (req, res) {
     console.log('connect /')
