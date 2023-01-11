@@ -2,10 +2,12 @@ const admin = require('firebase-admin');
 const fireStore = require('firebase-admin/firestore');
 const schedule = require('node-schedule');
 var _ = require('lodash');
-const colors = require('colors');
+const moment = require("moment");
 
 
-let serAccount = require('../firebaseFcm/dbcurd-67641-firebase-adminsdk-ax50d-d03370a8af.json');
+
+
+let serAccount = require('./dbcurd-67641-firebase-adminsdk-ax50d-d03370a8af.json');
 let checkMessageArray = [];
 let duplCheck = [];
 
@@ -130,7 +132,8 @@ async function getUserList(dbuser,localArray, localArrayData) {
                     for (let userDataIndex = 0; userDataIndex < userData.keyword.length; userDataIndex++) {
                       if( localArrayData[localArrayDataIndex].title.includes(userData.keyword[userDataIndex])){
                         if(userData.keyword[userDataIndex] != ''){
-                          console.log(userEmail+ " : "+ localArrayData[localArrayDataIndex].title);
+                          console.log(userEmail+ " : "+ localArrayData[localArrayDataIndex].registrationdate);
+                          let date = moment(localArrayData[localArrayDataIndex].registrationdate);
                           // token, keyword, title, link, registrationdate, center_name,userEmail
                           
                           let objectPushData = {
@@ -138,7 +141,7 @@ async function getUserList(dbuser,localArray, localArrayData) {
                             keyword : userData.keyword[userDataIndex],
                             title : localArrayData[localArrayDataIndex].title,
                             link : localArrayData[localArrayDataIndex].link,
-                            registrationdate : localArrayData[localArrayDataIndex].registrationdate,
+                            registrationdate : date.format("YYYY-MM-DD").toString(),
                             center_name : localArrayData[localArrayDataIndex]['center_name '],
                             userEmail : userEmail
                           }
@@ -164,7 +167,7 @@ async function getUserList(dbuser,localArray, localArrayData) {
 }
 
 function messageSend(token, keyword, title, link, registrationdate, center_name,userEmail) {
-  // console.log("userEmail : "+ userEmail);
+  console.log("registrationdate : "+ registrationdate);
   let target_token = token;
     let message = {
       notification: {
@@ -173,8 +176,8 @@ function messageSend(token, keyword, title, link, registrationdate, center_name,
       },
       data : {
         link : link,
-        // registrationdate : registrationdate,
         center_name : center_name,
+        registrationdate : registrationdate,
       },
       token: target_token,
     }
