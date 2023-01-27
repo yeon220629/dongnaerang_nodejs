@@ -1,6 +1,7 @@
 const express = require('express')
 const app = express()
 const fmcMessage = require('../dongnaerang_nodejs/firebaseFcm/sendMessage');
+const seoulApiJob = require('../dongnaerang_nodejs/firebaseFcm/seoulOpenApi'); // 서울 open api 잡 실행
 
 app.get('/', function (req, res) {
     console.log('connect /')
