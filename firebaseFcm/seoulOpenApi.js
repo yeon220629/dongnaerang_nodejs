@@ -6,7 +6,7 @@ const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require('firebase-admin/firestore');
 
 let serAccount = require('../firebaseFcm/dbcurd-67641-firebase-adminsdk-ax50d-d03370a8af.json');
-let spaceDataArr = [];
+let spaceDataMap = new Map();
 
 if (!getApps().length) {
     initializeApp({
@@ -20,30 +20,97 @@ const db = getFirestore();
 // 매일 새벽 3시 실행
 const seoulApiJob = schedule.scheduleJob('0 0 3 * * *', function () {
     putSeoulOpenApiSpaces();
-})
+});
 
-// 서울 open api 데이터 firebase storage에 저장
+// 서울 api 호출 후 firestore 입력
 async function putSeoulOpenApiSpaces() {
-    const spaceDocRef = db.collection('spaces').doc('seoulApiSpaces');
+    await getSeoulOpenApiSpaces('ListPublicReservationSport'); // 체육대관
+    await getSeoulOpenApiSpaces('ListPublicReservationCulture'); // 문화체험
+    await getSeoulOpenApiSpaces('ListPublicReservationEducation'); // 교육
+    await getSeoulOpenApiSpaces('ListPublicReservationInstitution'); // 시설대관
 
-    var date = moment().format('YYYY-MM-DD HH:mm:ss');
+    // api 데이터 조회되지 않을 때
+    if (spaceDataMap.size === 0) {
+        return ;
+    } 
+    // api 데이터 1개 이상 조회될 때
+    else {
+        try {
+            for(let [key, value] of spaceDataMap) {
+                await setFireStoreSpacesByGu(key, value);
+            }
+        } catch(e) {
+            console.log(e);
+        }
+    }
+}
+
+// 서울 open api 데이터 저장되는 값 샘플 보기
+exports.previewSeoulOpenApiSpaces = async function previewSeoulOpenApiSpaces(req, res) {
+    let spaces = {};
 
     await getSeoulOpenApiSpaces('ListPublicReservationSport'); // 체육대관
     await getSeoulOpenApiSpaces('ListPublicReservationCulture'); // 문화체험
     await getSeoulOpenApiSpaces('ListPublicReservationEducation'); // 교육
     await getSeoulOpenApiSpaces('ListPublicReservationInstitution'); // 시설대관
 
-    if (spaceDataArr.length === 0) {
-        return;
-    } else {
-        await spaceDocRef.set({
-            updated: date,
-            spaces: spaceDataArr
-        });
+    // api 데이터 조회되지 않을 때
+    if (spaceDataMap.size === 0) {
+        return res.status(204).json(
+            {
+                success : true,
+                total_count: 0,
+                message : "no content"
+            }
+        );
+    } 
+    // api 데이터 1개 이상 조회될 때
+    else {
+        try {
+            let totalCount = 0;
+
+            for(let [key, value] of spaceDataMap) {
+                spaces = {
+                    ...spaces,
+                    [key]: value
+                }
+                totalCount += value.length;
+            }
+
+            return res.status(200).json(
+                {
+                    success : true,
+                    total_count: totalCount,
+                    message : {
+                        spaces: spaces
+                    }
+                }
+            );
+        } catch(e) {
+            return res.status(500).json(
+                {
+                    success : false,
+                    message : e
+                }
+            );
+        }
     }
 }
 
-// 서울 open api 요청 후 spaceDataArr 에 저장
+// firestore 입력 : spaces > seoulApiSpaces > seoulApiSpacesByGu > 자치구별
+async function setFireStoreSpacesByGu(gu, value) {
+    const spaceDocRef = db.collection('spaces').doc('seoulApiSpaces').collection('seoulApiSpacesByGu').doc(gu);
+
+    try {
+        await spaceDocRef.set({
+            spaces: value
+        });
+    } catch(e) {
+        console.log(e);
+    }
+}
+
+// 서울 open api 요청 후 spaceDataMap 에 저장
 async function getSeoulOpenApiSpaces(service) {
     const limit = 100;
     let category = '';
@@ -73,7 +140,7 @@ async function getSeoulOpenApiSpaces(service) {
         let repeat = Math.ceil(listTotalCount / limit);
 
         // 처음 1 ~ limit
-        dataRowToArr(response.data[service]['row'], service, category);
+        dataRowToArr(response.data[service]['row'], category);
 
         // limit 초과일 경우 반복 처리
         for (let i = 0; i < repeat - 1; i++) {
@@ -82,7 +149,7 @@ async function getSeoulOpenApiSpaces(service) {
                     `http://openAPI.seoul.go.kr:8088/4b6e71576773647737344a616f444f/json/${service}/${100 * (i + 1) + 1}/${100 * (i + 2)}`,
                 )
 
-                dataRowToArr(response.data[service]['row'], service, category);
+                dataRowToArr(response.data[service]['row'], category);
             } catch (e) {
                 console.log(e);
             }
@@ -92,7 +159,10 @@ async function getSeoulOpenApiSpaces(service) {
     }
 }
 
-function dataRowToArr(data, service, category) {
+// spaceData 처리 후 spaceDataMap에 저장
+function dataRowToArr(data, category) {
+    var date = moment().format('YYYY-MM-DD HH:mm:ss');
+
     data.forEach(space => {
         // uid, 자치구, 장소명, 경도, 위도 유효성 검사
         if (space['SVCID'] == "" || space['AREANM'] == "" || space['PLACENM'] == "" || space['X'] == "" || space['Y'] == "") {
@@ -126,13 +196,15 @@ function dataRowToArr(data, service, category) {
             svcTimeMin: space['V_MIN'],
             svcTimeMax: space['V_MAX'],
             payInfo: space['PAYATNM'],
-            useTarget: space['USETGTINFO']
+            useTarget: space['USETGTINFO'],
+            updated: date
         }
 
-        spaceDataArr.push(spaceData);
-
+        // spaceDataMap 에 구별로 저장
+        if(spaceDataMap.has(spaceData.gu)) {
+            spaceDataMap.get(spaceData.gu).push(spaceData);
+        } else {
+            spaceDataMap.set(spaceData.gu, [spaceData]);
+        }
     });
-
 }
-
-module.exports = seoulApiJob;
