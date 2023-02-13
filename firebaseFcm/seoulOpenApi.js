@@ -163,21 +163,21 @@ async function getSeoulOpenApiSpaces(service) {
 function dataRowToArr(data, category) {
     var date = moment().format('YYYY-MM-DD HH:mm:ss');
 
-    data.forEach(space => {
+    for(const space of data) {
         // uid, 자치구, 장소명, 경도, 위도 유효성 검사
         if (space['SVCID'] == "" || space['AREANM'] == "" || space['PLACENM'] == "" || space['X'] == "" || space['Y'] == "") {
-            return;
+            break;
         }
 
         // 위도, 경도 유효성 검사
         let lat = parseFloat(space['Y']);
         let long = parseFloat(space['X']);
 
-        if ((lat < 33 && lat > 43) || (long < 124 && long > 132)) {
-            return;
-        } else {
+        if ((lat > 33 && lat < 43) && (long > 124 && long < 132)) {
             lat = parseFloat(lat.toFixed(6));
             long = parseFloat(long.toFixed(6));
+        } else {
+            break;
         }
 
         spaceData = {
@@ -206,5 +206,5 @@ function dataRowToArr(data, category) {
         } else {
             spaceDataMap.set(spaceData.gu, [spaceData]);
         }
-    });
+    };
 }

@@ -82,15 +82,15 @@ async function setFireStoreSpacesByGu(gu, value) {
 
 // spaceData 전체 json > 자치구별로 spaceDataMap 에 저장
 async function dataToMapByGu(data) {
-    await data.forEach(space => {
+    for(const space of data) {
         // uid, 자치구, 장소명, 경도, 위도 유효성 검사
         if (space['uid'] == "" || space['gu'] == "" || space['spaceName'] == "" || space['latitude'] == "" || space['longitude'] == "") {
-            return;
+            break;
         }
 
         // 위도, 경도 유효성 검사
-        if ((space['latitude'] < 33 && space['latitude'] > 43) || (space['longitude'] < 124 && space['longitude'] > 132)) {
-            return;
+        if (!((space['latitude'] > 33 && space['latitude'] < 43) && (space['longitude'] > 124 && space['longitude'] < 132))) {
+            break;
         }
 
         // spaceDataMap 에 구별로 저장
@@ -99,7 +99,7 @@ async function dataToMapByGu(data) {
         } else {
             spaceDataMap.set(space.gu, [space]);
         }
-    })
+    }
 }
 
 // 파일 읽기 함수
