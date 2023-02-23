@@ -3,7 +3,7 @@ const schedule = require('node-schedule');
 const moment = require("moment");
 
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
 let serAccount = require('../firebaseFcm/dbcurd-67641-firebase-adminsdk-ax50d-d03370a8af.json');
 let spaceDataMap = new Map();
@@ -31,15 +31,15 @@ async function putSeoulOpenApiSpaces() {
 
     // api 데이터 조회되지 않을 때
     if (spaceDataMap.size === 0) {
-        return ;
-    } 
+        return;
+    }
     // api 데이터 1개 이상 조회될 때
     else {
         try {
-            for(let [key, value] of spaceDataMap) {
+            for (let [key, value] of spaceDataMap) {
                 await setFireStoreSpacesByGu(key, value);
             }
-        } catch(e) {
+        } catch (e) {
             console.log(e);
         }
     }
@@ -58,18 +58,18 @@ exports.previewSeoulOpenApiSpaces = async function previewSeoulOpenApiSpaces(req
     if (spaceDataMap.size === 0) {
         return res.status(204).json(
             {
-                success : true,
+                success: true,
                 total_count: 0,
-                message : "no content"
+                message: "no content"
             }
         );
-    } 
+    }
     // api 데이터 1개 이상 조회될 때
     else {
         try {
             let totalCount = 0;
 
-            for(let [key, value] of spaceDataMap) {
+            for (let [key, value] of spaceDataMap) {
                 spaces = {
                     ...spaces,
                     [key]: value
@@ -79,18 +79,18 @@ exports.previewSeoulOpenApiSpaces = async function previewSeoulOpenApiSpaces(req
 
             return res.status(200).json(
                 {
-                    success : true,
+                    success: true,
                     total_count: totalCount,
-                    message : {
+                    message: {
                         spaces: spaces
                     }
                 }
             );
-        } catch(e) {
+        } catch (e) {
             return res.status(500).json(
                 {
-                    success : false,
-                    message : e
+                    success: false,
+                    message: e
                 }
             );
         }
@@ -102,10 +102,13 @@ async function setFireStoreSpacesByGu(gu, value) {
     const spaceDocRef = db.collection('spaces').doc('seoulApiSpaces').collection('seoulApiSpacesByGu').doc(gu);
 
     try {
+        await spaceDocRef.update({
+            spaces: FieldValue.delete()
+        });
         await spaceDocRef.set({
             spaces: value
         });
-    } catch(e) {
+    } catch (e) {
         console.log(e);
     }
 }
@@ -163,7 +166,7 @@ async function getSeoulOpenApiSpaces(service) {
 function dataRowToArr(data, category) {
     var date = moment().format('YYYY-MM-DD HH:mm:ss');
 
-    for(const space of data) {
+    for (const space of data) {
         // uid, 자치구, 장소명, 경도, 위도 유효성 검사
         if (space['SVCID'] == "" || space['AREANM'] == "" || space['PLACENM'] == "" || space['X'] == "" || space['Y'] == "") {
             break;
@@ -201,7 +204,7 @@ function dataRowToArr(data, category) {
         }
 
         // spaceDataMap 에 구별로 저장
-        if(spaceDataMap.has(spaceData.gu)) {
+        if (spaceDataMap.has(spaceData.gu)) {
             spaceDataMap.get(spaceData.gu).push(spaceData);
         } else {
             spaceDataMap.set(spaceData.gu, [spaceData]);
