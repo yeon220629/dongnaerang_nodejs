@@ -24,6 +24,8 @@ const seoulApiJob = schedule.scheduleJob('0 0 3 * * *', function () {
 
 // 서울 api 호출 후 firestore 입력
 async function putSeoulOpenApiSpaces() {
+    spaceDataMap.clear();
+    
     await getSeoulOpenApiSpaces('ListPublicReservationSport'); // 체육대관
     await getSeoulOpenApiSpaces('ListPublicReservationCulture'); // 문화체험
     await getSeoulOpenApiSpaces('ListPublicReservationEducation'); // 교육
